@@ -10,4 +10,21 @@ var DaySchema = new mongoose.Schema({
   activities: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Activity' }]
 });
 
+DaySchema.statics.findOrCreate = function (dayInfo) {
+  var self = this;
+
+  return this.findOne({ number: dayInfo.number })
+    .then(function (day) {
+      if (day === null) {
+        return self.create(dayInfo);
+      } else {
+        return day;
+      }
+    });
+};
+
+
+
+
+
 module.exports = mongoose.model('Day', DaySchema);

@@ -33,6 +33,7 @@ var daysModule = (function(){
     this.$button.on('click', function(){
       this.blur(); // removes focus box from buttons
       self.switchTo();
+
     });
     return this;
   };
@@ -51,6 +52,10 @@ var daysModule = (function(){
 
   Day.prototype.switchTo = function () {
     currentDay.hide();
+
+    $.get('/days/' + this.number, function (data) {console.log('GET response data', data)})
+  .fail( function (err) {console.error('err', err)} );
+
     currentDay = this;
     currentDay.draw();
   };
@@ -89,6 +94,22 @@ var daysModule = (function(){
     var newDay = new Day();
     if (days.length === 1) currentDay = newDay;
     newDay.switchTo();
+
+    $.ajax({
+      method: 'POST',
+      url: '/days',
+      data: { number: newDay.number,
+              hotel: newDay.hotel._id,
+              restaurants: newDay.restaurants.map(function(rest) {
+                return rest._id
+            }),
+              activities: newDay.activities.map(function(act) {
+                return act._id
+              })
+       },
+      success: function (data) {console.log('POST response data', data)},
+      error: function (err) {console.error('err', err)}
+    })
   }
 
   function deleteCurrentDay () {
@@ -96,10 +117,20 @@ var daysModule = (function(){
     var index = days.indexOf(currentDay),
       previousDay = days.splice(index, 1)[0],
       newCurrent = days[index] || days[index - 1];
-    days.forEach(function (day, idx) {
+
+      console.log('prev day', previousDay);
+      days.forEach(function (day, idx) {
       day.number = idx + 1;
       day.$button.text(day.number);
     });
+    // $.ajax({
+    //     type: "DELETE",
+    //     url: "/days",
+    //     data: {number: 1},
+    //     success: function(data) {console.log("DELETE response data: ", data)},
+    //     error: function (err) {console.error('err', err)}
+    //   });
+
     newCurrent.switchTo();
     previousDay.hideButton();
   }
@@ -116,12 +147,39 @@ var daysModule = (function(){
       // adding to the day object
       switch (attraction.type) {
         case 'hotel':
-          if (currentDay.hotel) currentDay.hotel.delete();
-          currentDay.hotel = attraction; break;
+          // if (currentDay.hotel) currentDay.hotel.removeFromDay();
+          currentDay.hotel = attraction;
+          console.log(attraction);
+          $.ajax({
+            type: "PUT",
+            url: "/days/" + currentDay.number + "/hotel",
+            data: {hotel: currentDay.hotel._id},
+            success: function(data) {console.log("PUT response data: ", data)},
+            error: function (err) {console.error('err', err)}
+          });
+          break;
         case 'restaurant':
-          utilsModule.pushUnique(currentDay.restaurants, attraction); break;
+          utilsModule.pushUnique(currentDay.restaurants, attraction);
+          var restIdx = currentDay.restaurants.indexOf(attraction);
+          $.ajax({
+            type: "PUT",
+            url: "/days/" + currentDay.number + "/restaurants",
+            data: {restaurant: currentDay.restaurants[restIdx]._id},
+            success: function(data) {console.log("PUT response data: ", data)},
+            error: function (err) {console.error('err', err)}
+          });
+          break;
         case 'activity':
-          utilsModule.pushUnique(currentDay.activities, attraction); break;
+          utilsModule.pushUnique(currentDay.activities, attraction); 
+          var actIdx = currentDay.activities.indexOf(attraction);
+          $.ajax({
+            type: "PUT",
+            url: "/days/" + currentDay.number + "/activities",
+            data: {activity: currentDay.activities[actIdx]._id},
+            success: function(data) {console.log("PUT response data: ", data)},
+            error: function (err) {console.error('err', err)}
+          });
+          break;
         default: console.error('bad type:', attraction);
       }
       // activating UI
